@@ -504,6 +504,49 @@ We welcome contributions to enhance this innovative project! 🙌
 4. Push to the branch `git push origin feature/amazing-feature` 📤
 5. Open a Pull Request 🔄
 
+## 🏗️ Phase 5: Advanced Architectural Requirements
+
+### 1. Event-Driven Architecture
+Phase 5 specifically requires the implementation of an event-driven pattern using Kafka and Dapr. Our system implements:
+- **Redpanda (Kafka-compatible)** setup actively handling pub/sub events
+- Notifications to the AI agent when tasks are updated via the web UI
+- Real-time event processing for task management operations
+
+### 2. Dapr Integration
+We utilize Dapr sidecars for:
+- Service-to-service communication
+- State management capabilities
+- Distributed pub/sub messaging patterns
+- Component-based architecture for scalability
+
+### 3. Deployment Target
+While the original specification mentioned DigitalOcean Kubernetes (DOKS), our implementation is compatible with multiple cloud providers including Oracle Cloud Infrastructure (OCI), ensuring flexibility and vendor neutrality.
+
+### 4. Spec-Driven Deliverables
+Our implementation satisfies the Spec-Kit Plus requirements for Phase 5 through:
+- **Updated Constitution**: A comprehensive Markdown file defining the rules for Phase 5 cloud-native patterns
+- **Infrastructure Specs**: Detailed files in our specs/ directory describing cloud-native behavior
+- **Claude Code History**: Evidence of AI-assisted generation of Kubernetes manifests and Dapr configurations based on specifications
+
+### 5. Advanced AI Features
+As the final phase, our implementation includes advanced intelligent features:
+- **Recurring Tasks**: AI-driven auto-rescheduling for recurring activities
+- **Smart Reminders**: Integration with browser notifications for due dates
+- **Multilingual Support**: Support for multiple languages including Urdu for broader accessibility
+- **Voice Commands**: Voice-enabled task management through the AI chat interface
+
+## 🚀 Next Steps for Production Deployment
+
+### CI/CD Pipeline
+- Automated building and pushing to cloud registries
+- Continuous deployment to Kubernetes clusters
+- Automated testing and validation workflows
+
+### Verification & Monitoring
+- 90-second demo video showcasing cloud deployment
+- Real-time monitoring and observability dashboards
+- Performance metrics and system health checks
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 📜
