@@ -1,0 +1,57 @@
+# Dapr Components for OKE deployment
+
+---
+# Redis State Store Component
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+  namespace: todo-app
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+  - name: redisHost
+    value: redis-master.dapr-system.svc.cluster.local:6379
+  - name: redisPassword
+    value: ""
+  - name: actorStateStore
+    value: "true"
+  - name: concurrency
+    value: "parallel"
+  - name: enableTLS
+    value: "false"
+---
+# Kafka/Redpanda Pub/Sub Component
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+  namespace: todo-app
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+  - name: brokers
+    value: "redpanda-cluster-kafka-bootstrap.redpanda.svc.cluster.local:9092"
+  - name: authType
+    value: "none"
+  - name: consumerGroup
+    value: "my-dapr-consumer-group"
+  - name: clientID
+    value: "dapr-client"
+  - name: disableTls
+    value: "true"
+  - name: version
+    value: "2.8.0"
+---
+# Secret Store Component (using Kubernetes)
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: kubernetes-secret-store
+  namespace: todo-app
+spec:
+  type: secretstores.kubernetes
+  version: v1
+  metadata: []

@@ -1,0 +1,68 @@
+{
+  "chatbot_config": {
+    "name": "Task Management Assistant",
+    "version": "1.0",
+    "primary_role": "Task Management",
+    "capabilities": [
+      "create_tasks",
+      "update_tasks",
+      "search_tasks",
+      "delete_tasks",
+      "track_status",
+      "organize_tasks"
+    ],
+    "interaction_modes": {
+      "structured_prompts": true,
+      "natural_language": true,
+      "verification_required": true
+    },
+    "default_task_fields": [
+      "title",
+      "description",
+      "status",
+      "priority",
+      "due_date",
+      "category",
+      "task_id"
+    ],
+    "supported_actions": [
+      {
+        "action": "create_task",
+        "required_fields": ["title"],
+        "optional_fields": ["description", "priority", "due_date", "category"]
+      },
+      {
+        "action": "update_task",
+        "required_fields": ["identifier", "field_to_update", "new_value"],
+        "verification_required": true
+      },
+      {
+        "action": "search_tasks",
+        "filters": ["status", "priority", "category", "due_date", "keyword"]
+      },
+      {
+        "action": "get_task_details",
+        "required_fields": ["task_identifier"]
+      },
+      {
+        "action": "delete_task",
+        "required_fields": ["task_identifier"],
+        "confirmation_required": true
+      }
+    ],
+    "response_format": {
+      "success_template": "✅ Action completed successfully",
+      "error_template": "❌ Error occurred: [error_message]",
+      "confirmation_template": "Please confirm: [action_details]",
+      "verification_template": "Verification: [before_state] → [after_state]"
+    },
+    "validation_rules": {
+      "task_title_min_length": 3,
+      "date_format": "YYYY-MM-DD",
+      "priority_values": ["Low", "Medium", "High"],
+      "status_values": ["Pending", "In Progress", "Completed", "Cancelled"]
+    },
+    "conversation_tone": "professional_friendly",
+    "error_handling": "graceful_with_suggestions"
+  }
+}

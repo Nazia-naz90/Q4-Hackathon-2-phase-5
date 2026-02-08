@@ -1,0 +1,76 @@
+# AI Agent Service with Dapr Sidecar for OKE
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-ai-agent
+  namespace: todo-app
+  labels:
+    app: todo-ai-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-ai-agent
+  template:
+    metadata:
+      labels:
+        app: todo-ai-agent
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "todo-ai-agent"
+        dapr.io/app-port: "8001"
+        dapr.io/app-protocol: "http"
+        dapr.io/log-level: "info"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      containers:
+      - name: ai-agent
+        image: todo-ai-agent:latest
+        ports:
+        - containerPort: 8001
+        env:
+        - name: BACKEND_URL
+          value: "http://todo-backend:8000"
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: todo-secrets
+              key: openai-api-key
+        - name: PYTHON_ENV
+          value: "production"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+# AI Agent Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-ai-agent
+  namespace: todo-app
+  labels:
+    app: todo-ai-agent
+spec:
+  selector:
+    app: todo-ai-agent
+  ports:
+    - protocol: TCP
+      port: 8001
+      targetPort: 8001
+  type: ClusterIP

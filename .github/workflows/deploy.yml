@@ -1,0 +1,148 @@
+name: Deploy to Oracle Cloud Infrastructure (OCI) OKE
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  ORACLE_REGION: ${{ secrets.ORACLE_REGION }}
+  COMPARTMENT_ID: ${{ secrets.COMPARTMENT_ID }}
+  CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install OCI CLI
+      run: |
+        curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh -o install.sh
+        chmod +x install.sh
+        ./install.sh --accept-all-defaults
+        echo "$HOME/bin" >> $GITHUB_PATH
+
+    - name: Install kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure OCI CLI
+      run: |
+        mkdir -p ~/.oci
+        echo "${{ secrets.OCI_CONFIG }}" > ~/.oci/config
+        echo "${{ secrets.OCI_PRIVATE_KEY }}" > ~/.oci/oci_api_key.pem
+        chmod 600 ~/.oci/oci_api_key.pem
+
+    - name: Authenticate to OCI and get OKE kubeconfig
+      run: |
+        oci ce cluster create-kubeconfig --cluster-name $CLUSTER_NAME --file $HOME/.kube/config --region $ORACLE_REGION --token-version 2.0.0
+        kubectl config current-context
+
+    - name: Build and push frontend image to OCIR
+      run: |
+        DOCKER_REGISTRY=${{ secrets.OCI_TENANCY }}.ocir.io/${{ secrets.OCI_NAMESPACE }}
+        IMAGE_TAG=$DOCKER_REGISTRY/todo-frontend:${{ github.sha }}
+        
+        # Login to OCIR
+        echo ${{ secrets.OCI_AUTH_TOKEN }} | docker login ${{ secrets.OCI_TENANCY }}.ocir.io -u ${{ secrets.OCI_USERNAME }} --password-stdin
+        
+        # Build and push frontend
+        cd frontend
+        docker build -t $IMAGE_TAG .
+        docker push $IMAGE_TAG
+        
+        # Update image tag in deployment files
+        cd ..
+        sed -i "s|todo-frontend:latest|$IMAGE_TAG|g" k8s-manifests/oke/deployment-all.yaml
+
+    - name: Build and push backend image to OCIR
+      run: |
+        DOCKER_REGISTRY=${{ secrets.OCI_TENANCY }}.ocir.io/${{ secrets.OCI_NAMESPACE }}
+        IMAGE_TAG=$DOCKER_REGISTRY/todo-backend:${{ github.sha }}
+        
+        # Login to OCIR
+        echo ${{ secrets.OCI_AUTH_TOKEN }} | docker login ${{ secrets.OCI_TENANCY }}.ocir.io -u ${{ secrets.OCI_USERNAME }} --password-stdin
+        
+        # Build and push backend
+        cd backend
+        docker build -t $IMAGE_TAG .
+        docker push $IMAGE_TAG
+        
+        # Update image tag in deployment files
+        cd ..
+        sed -i "s|todo-backend:latest|$IMAGE_TAG|g" k8s-manifests/oke/deployment-all.yaml
+
+    - name: Build and push AI agent image to OCIR
+      run: |
+        DOCKER_REGISTRY=${{ secrets.OCI_TENANCY }}.ocir.io/${{ secrets.OCI_NAMESPACE }}
+        IMAGE_TAG=$DOCKER_REGISTRY/todo-ai-agent:${{ github.sha }}
+        
+        # Login to OCIR
+        echo ${{ secrets.OCI_AUTH_TOKEN }} | docker login ${{ secrets.OCI_TENANCY }}.ocir.io -u ${{ secrets.OCI_USERNAME }} --password-stdin
+        
+        # Build and push AI agent
+        cd ai-agent
+        docker build -t $IMAGE_TAG .
+        docker push $IMAGE_TAG
+        
+        # Update image tag in deployment files
+        cd ..
+        sed -i "s|todo-ai-agent:latest|$IMAGE_TAG|g" k8s-manifests/oke/deployment-all.yaml
+
+    - name: Deploy to OKE
+      run: |
+        # Apply all manifests to the cluster
+        kubectl apply -f k8s-manifests/oke/deployment-all.yaml
+        
+        # Wait for deployments to be ready
+        kubectl wait --for=condition=ready pod -l app=redis -n dapr-system --timeout=300s
+        kubectl wait --for=condition=ready pod -l app=redpanda -n redpanda --timeout=300s
+        kubectl wait --for=condition=ready pod -l app=todo-backend -n todo-app --timeout=300s
+        kubectl wait --for=condition=ready pod -l app=todo-frontend -n todo-app --timeout=300s
+        kubectl wait --for=condition=ready pod -l app=todo-ai-agent -n todo-app --timeout=300s
+
+    - name: Verify deployment
+      run: |
+        echo "Checking deployment status..."
+        kubectl get pods -n todo-app
+        kubectl get services -n todo-app
+        kubectl get pods -n dapr-system
+        kubectl get pods -n redpanda
+        
+        # Get external IP for frontend
+        FRONTEND_IP=$(kubectl get svc todo-frontend -n todo-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        echo "Frontend External IP: $FRONTEND_IP"
+        
+        # Wait for service to be accessible
+        sleep 30
+        
+        # Test the application
+        if [ ! -z "$FRONTEND_IP" ]; then
+          echo "Testing application accessibility..."
+          curl -f http://$FRONTEND_IP/ || echo "Warning: Frontend not accessible yet, may still be starting up"
+        else
+          echo "Frontend service is not yet assigned an external IP"
+        fi
+
+    - name: Send notification on failure
+      if: failure()
+      run: |
+        echo "Deployment failed. Please check the logs for details."

@@ -1,0 +1,68 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+node_modules/
+
+nul
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*
+.envrc
+.env.backup
+.env.prod
+.env.production
+.env.dev
+.env.development
+.env.test
+.env.testing
+.env.staging
+.env.backup*
+.env.save
+
+# Secrets and certificates
+*.key
+*.pem
+*.crt
+*.cert
+*.secret
+secrets.json
+config.json
+private.key
+id_rsa
+id_rsa.pub
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
